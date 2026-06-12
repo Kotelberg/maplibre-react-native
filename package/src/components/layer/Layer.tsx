@@ -168,6 +168,22 @@ export type RasterLayerProps = SourceLayerProps & {
   style?: RasterLayerStyle;
 };
 
+/**
+ * Fork extension: renders one glTF/GLB model per `Point` feature of a GeoJSON
+ * source. Per-feature placement is data-driven through feature properties:
+ * `bearing` (yaw degrees), `size` (height meters), `footprint` (x/y
+ * multiplier, default 1).
+ */
+export type ModelLayerProps = LegacyBaseLayerProps & {
+  type: "model";
+  source?: string;
+  /** Maps asset ids to local GLB file paths. */
+  modelAssets?: Record<string, string>;
+  /** The asset id (a key of `modelAssets`) rendered for features. */
+  modelID?: string;
+  style?: never;
+};
+
 export type LayerProps =
   | StyleSpecLayerProps
   | FillLayerProps
@@ -177,7 +193,8 @@ export type LayerProps =
   | HeatmapLayerProps
   | FillExtrusionLayerProps
   | RasterLayerProps
-  | BackgroundLayerProps;
+  | BackgroundLayerProps
+  | ModelLayerProps;
 
 /**
  * Layer is a style layer that renders geospatial data on the map.

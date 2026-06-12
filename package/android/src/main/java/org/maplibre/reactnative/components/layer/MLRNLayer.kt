@@ -17,6 +17,7 @@ import org.maplibre.android.style.layers.HeatmapLayer
 import org.maplibre.android.style.layers.HillshadeLayer
 import org.maplibre.android.style.layers.Layer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.ModelLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.RasterLayer
@@ -42,6 +43,8 @@ class MLRNLayer(
     private var mReactStyle: ReadableMap? = null
     private var mFilter: Expression? = null
     private var mHadFilter: Boolean = false
+    private var mModelAssets: ReadableMap? = null
+    private var mModelID: String? = null
 
     private var mLayerType: String? = null
     private var mSourceLayerID: String? = null
@@ -133,6 +136,27 @@ class MLRNLayer(
         }
     }
 
+    // `model` layer only (fork extension): asset id -> local GLB path. The
+    // native convenience constructor registers a single asset, so the entry
+    // matching mModelID (or the first entry) wins.
+    fun setModelAssets(modelAssets: ReadableMap?) {
+        mModelAssets = modelAssets
+    }
+
+    fun setModelID(modelID: String?) {
+        mModelID = modelID
+    }
+
+    private fun resolveModelGlbPath(): String? {
+        val assets = mModelAssets ?: return null
+        val modelID = mModelID
+        if (modelID != null && assets.hasKey(modelID)) {
+            return assets.getString(modelID)
+        }
+        val iterator = assets.keySetIterator()
+        return if (iterator.hasNextKey()) assets.getString(iterator.nextKey()) else null
+    }
+
     fun setFilter(readableFilterArray: ReadableArray?) {
         val filterExpression = from(readableFilterArray)
         mFilter = filterExpression
@@ -192,6 +216,16 @@ class MLRNLayer(
                 val layer = LineLayer(mID, mSourceID)
                 if (mSourceLayerID != null) layer.setSourceLayer(mSourceLayerID)
                 layer
+            }
+
+            "model" -> {
+                val glbPath = resolveModelGlbPath()
+                if (glbPath == null) {
+                    FLog.e(LOG_TAG, "model layer $mID has no modelAssets entry")
+                    null
+                } else {
+                    ModelLayer(mID, mSourceID, glbPath)
+                }
             }
 
             "raster" -> {

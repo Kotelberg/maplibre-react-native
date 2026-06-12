@@ -32,6 +32,8 @@ static MLRNLayerType MLRNLayerTypeFromCppEnum(MLRNLayerLayerType layerType) {
       return MLRNLayerTypeHillshade;
     case MLRNLayerLayerType::Line:
       return MLRNLayerTypeLine;
+    case MLRNLayerLayerType::Model:
+      return MLRNLayerTypeModel;
     case MLRNLayerLayerType::Raster:
       return MLRNLayerTypeRaster;
     case MLRNLayerLayerType::Symbol:
@@ -126,6 +128,14 @@ static MLRNLayerType MLRNLayerTypeFromCppEnum(MLRNLayerLayerType layerType) {
 
   if (oldViewProps.reactStyle != newViewProps.reactStyle) {
     _view.reactStyle = MLRN_DYNAMIC_TO_DICT(newViewProps.reactStyle);
+  }
+
+  if (oldViewProps.modelAssets != newViewProps.modelAssets) {
+    _view.modelAssets = MLRN_DYNAMIC_TO_DICT(newViewProps.modelAssets);
+  }
+
+  if (oldViewProps.modelID != newViewProps.modelID) {
+    _view.modelID = RCTNSStringFromStringNilIfEmpty(newViewProps.modelID);
   }
 
   [super updateProps:props oldProps:oldProps];

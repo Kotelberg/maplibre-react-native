@@ -99,6 +99,22 @@ class MLRNLayerManager : ViewGroupManager<MLRNLayer>() {
         layer!!.setFilter(filterList)
     }
 
+    @ReactProp(name = "modelAssets")
+    fun setModelAssets(
+        layer: MLRNLayer?,
+        modelAssets: ReadableMap?,
+    ) {
+        layer!!.setModelAssets(modelAssets)
+    }
+
+    @ReactProp(name = "modelID")
+    fun setModelID(
+        layer: MLRNLayer?,
+        modelID: String?,
+    ) {
+        layer!!.setModelID(modelID)
+    }
+
     companion object {
         const val REACT_CLASS: String = "MLRNLayer"
     }

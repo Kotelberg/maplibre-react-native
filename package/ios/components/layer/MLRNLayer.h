@@ -13,6 +13,7 @@ typedef NS_ENUM(NSInteger, MLRNLayerType) {
   MLRNLayerTypeHeatmap,
   MLRNLayerTypeHillshade,
   MLRNLayerTypeLine,
+  MLRNLayerTypeModel,
   MLRNLayerTypeRaster,
   MLRNLayerTypeSymbol,
 };
@@ -36,6 +37,11 @@ typedef NS_ENUM(NSInteger, MLRNLayerType) {
 
 @property (nonatomic, copy, nullable) NSNumber *maxZoomLevel;
 @property (nonatomic, copy, nullable) NSNumber *minZoomLevel;
+
+// `model` layer only (fork extension): asset id -> local GLB path, and the
+// asset id rendered for features.
+@property (nonatomic, copy, nullable) NSDictionary<NSString *, NSString *> *modelAssets;
+@property (nonatomic, copy, nullable) NSString *modelID;
 
 - (void)addToMap:(nonnull MLRNMapView *)map style:(nonnull MLNStyle *)style;
 - (void)addedToMap;

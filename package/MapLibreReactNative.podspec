@@ -16,6 +16,27 @@ $MLRN_SPM_SPEC ||= {
 $MLRN = Object.new
 
 def $MLRN._add_spm_to_target(project, target, url, requirement, product_name)
+  # hatahub fork: a directory `url` selects a local Swift package (vendored
+  # MapLibre.xcframework built from the maplibre-native fork).
+  if File.directory?(url.to_s)
+    pkg_class = Xcodeproj::Project::Object::XCLocalSwiftPackageReference
+    ref_class = Xcodeproj::Project::Object::XCSwiftPackageProductDependency
+    pkg = project.root_object.package_references.find { |p| p.class == pkg_class && p.relative_path == url }
+    if !pkg
+      pkg = project.new(pkg_class)
+      pkg.relative_path = url
+      project.root_object.package_references << pkg
+    end
+    ref = target.package_product_dependencies.find { |r| r.class == ref_class && r.package == pkg && r.product_name == product_name }
+    if !ref
+      ref = project.new(ref_class)
+      ref.package = pkg
+      ref.product_name = product_name
+      target.package_product_dependencies << ref
+    end
+    return
+  end
+
   pkg_class = Xcodeproj::Project::Object::XCRemoteSwiftPackageReference
   ref_class = Xcodeproj::Project::Object::XCSwiftPackageProductDependency
   pkg = project.root_object.package_references.find { |p| p.class == pkg_class && p.repositoryURL == url }

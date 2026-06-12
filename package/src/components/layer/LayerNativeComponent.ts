@@ -19,6 +19,7 @@ export interface NativeProps extends ViewProps {
     | "heatmap"
     | "hillshade"
     | "line"
+    | "model"
     | "raster"
     | "symbol",
     "background"
@@ -26,6 +27,11 @@ export interface NativeProps extends ViewProps {
 
   source?: string;
   sourceLayer?: string;
+
+  // `model` layer only (fork extension): asset id -> local GLB path, and the
+  // asset id rendered for features.
+  modelAssets?: UnsafeMixed<Record<string, string>>;
+  modelID?: string;
 
   afterId?: string;
   beforeId?: string;

@@ -74,6 +74,37 @@
   }
 }
 
+- (void)setModelAssets:(NSDictionary<NSString *, NSString *> *)modelAssets {
+  _modelAssets = modelAssets;
+
+  if (_styleLayer != nil && [_styleLayer isKindOfClass:[MLNModelStyleLayer class]]) {
+    ((MLNModelStyleLayer *)_styleLayer).modelAssets = modelAssets ?: @{};
+    [self applyModelID];
+  }
+}
+
+- (void)setModelID:(NSString *)modelID {
+  _modelID = modelID;
+
+  if (_styleLayer != nil && [_styleLayer isKindOfClass:[MLNModelStyleLayer class]]) {
+    [self applyModelID];
+  }
+}
+
+// The layer renders the `modelID` asset when present, falling back to the
+// first registered asset.
+- (void)applyModelID {
+  [self applyModelIDToLayer:(MLNModelStyleLayer *)_styleLayer];
+}
+
+- (void)applyModelIDToLayer:(MLNModelStyleLayer *)layer {
+  NSString *modelID = _modelID;
+  if (modelID == nil || _modelAssets[modelID] == nil) {
+    modelID = _modelAssets.allKeys.firstObject;
+  }
+  layer.modelID = modelID;
+}
+
 - (void)setReactStyle:(NSDictionary *)reactStyle {
   _reactStyle = reactStyle;
 
@@ -199,6 +230,15 @@
     case MLRNLayerTypeLine:
       layer = [[MLNLineStyleLayer alloc] initWithIdentifier:_id source:source];
       break;
+    case MLRNLayerTypeModel: {
+      MLNModelStyleLayer *modelLayer =
+          [[MLNModelStyleLayer alloc] initWithIdentifier:_id
+                                        sourceIdentifier:source.identifier];
+      modelLayer.modelAssets = _modelAssets ?: @{};
+      [self applyModelIDToLayer:modelLayer];
+      layer = modelLayer;
+      break;
+    }
     case MLRNLayerTypeRaster:
       layer = [[MLNRasterStyleLayer alloc] initWithIdentifier:_id source:source];
       break;
