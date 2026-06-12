@@ -137,10 +137,16 @@ class MLRNLayer(
     }
 
     // `model` layer only (fork extension): asset id -> local GLB path. The
-    // native convenience constructor registers a single asset, so the entry
-    // matching mModelID (or the first entry) wins.
+    // layer is created with the assets known at mount; later prop updates
+    // (viewport reveals placements referencing new models) must reach the
+    // live native layer too, or those features fall back to placeholder
+    // cubes forever.
     fun setModelAssets(modelAssets: ReadableMap?) {
         mModelAssets = modelAssets
+        val layer = mLayer
+        if (layer is ModelLayer) {
+            modelAssetArrays()?.let { (ids, paths) -> layer.setModelAssets(ids, paths) }
+        }
     }
 
     fun setModelID(modelID: String?) {
