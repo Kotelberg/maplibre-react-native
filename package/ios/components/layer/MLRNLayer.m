@@ -91,18 +91,14 @@
   }
 }
 
-// The layer renders the `modelID` asset when present, falling back to the
-// first registered asset.
+// The layer renders the `modelID` asset when set; nil means each feature's
+// `model-id` property selects the asset (per-feature heterogeneous models).
 - (void)applyModelID {
   [self applyModelIDToLayer:(MLNModelStyleLayer *)_styleLayer];
 }
 
 - (void)applyModelIDToLayer:(MLNModelStyleLayer *)layer {
-  NSString *modelID = _modelID;
-  if (modelID == nil || _modelAssets[modelID] == nil) {
-    modelID = _modelAssets.allKeys.firstObject;
-  }
-  layer.modelID = modelID;
+  layer.modelID = _modelID;
 }
 
 - (void)setReactStyle:(NSDictionary *)reactStyle {

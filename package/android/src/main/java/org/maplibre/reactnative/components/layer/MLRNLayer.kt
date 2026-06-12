@@ -147,14 +147,19 @@ class MLRNLayer(
         mModelID = modelID
     }
 
-    private fun resolveModelGlbPath(): String? {
+    private fun modelAssetArrays(): Pair<Array<String>, Array<String>>? {
         val assets = mModelAssets ?: return null
-        val modelID = mModelID
-        if (modelID != null && assets.hasKey(modelID)) {
-            return assets.getString(modelID)
-        }
+        val ids = mutableListOf<String>()
+        val paths = mutableListOf<String>()
         val iterator = assets.keySetIterator()
-        return if (iterator.hasNextKey()) assets.getString(iterator.nextKey()) else null
+        while (iterator.hasNextKey()) {
+            val id = iterator.nextKey()
+            assets.getString(id)?.let { path ->
+                ids.add(id)
+                paths.add(path)
+            }
+        }
+        return if (ids.isEmpty()) null else Pair(ids.toTypedArray(), paths.toTypedArray())
     }
 
     fun setFilter(readableFilterArray: ReadableArray?) {
@@ -219,12 +224,13 @@ class MLRNLayer(
             }
 
             "model" -> {
-                val glbPath = resolveModelGlbPath()
-                if (glbPath == null) {
-                    FLog.e(LOG_TAG, "model layer $mID has no modelAssets entry")
+                val assetArrays = modelAssetArrays()
+                if (assetArrays == null) {
+                    FLog.e(LOG_TAG, "model layer $mID has no modelAssets entries")
                     null
                 } else {
-                    ModelLayer(mID, mSourceID, glbPath)
+                    // Null modelID = per-feature `model-id` property selection.
+                    ModelLayer(mID, mSourceID, assetArrays.first, assetArrays.second, mModelID)
                 }
             }
 
