@@ -21,6 +21,20 @@ def $MLRN._add_spm_to_target(project, target, url, requirement, product_name)
   if File.directory?(url.to_s)
     pkg_class = Xcodeproj::Project::Object::XCLocalSwiftPackageReference
     ref_class = Xcodeproj::Project::Object::XCSwiftPackageProductDependency
+
+    # Evict stale remote MapLibre distribution references — both packages
+    # export a product named "MapLibre" and SPM rejects duplicate product
+    # names across the package graph.
+    remote_class = Xcodeproj::Project::Object::XCRemoteSwiftPackageReference
+    stale = project.root_object.package_references.select do |p|
+      p.class == remote_class && p.repositoryURL.to_s.include?("maplibre-gl-native-distribution")
+    end
+    unless stale.empty?
+      target.package_product_dependencies.delete_if { |r| stale.include?(r.package) }
+      project.root_object.package_references.delete_if { |p| stale.include?(p) }
+      stale.each { |p| p.remove_from_project if p.project }
+    end
+
     pkg = project.root_object.package_references.find { |p| p.class == pkg_class && p.relative_path == url }
     if !pkg
       pkg = project.new(pkg_class)
