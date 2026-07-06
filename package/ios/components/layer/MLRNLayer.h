@@ -38,8 +38,11 @@ typedef NS_ENUM(NSInteger, MLRNLayerType) {
 @property (nonatomic, copy, nullable) NSNumber *maxZoomLevel;
 @property (nonatomic, copy, nullable) NSNumber *minZoomLevel;
 
-// `model` layer only (fork extension): asset id -> local GLB path, and the
-// asset id rendered for features.
+// `model` layer only (fork extension, aligned to the upstream `model` layer
+// API): asset id -> local GLB path, and the asset id rendered for features.
+// `modelID` stays a plain string at the RN bridge boundary for ergonomics;
+// internally it is composed into the generated `MLNModelStyleLayer.modelId`
+// NSExpression (see `applyModelIDToLayer:` in MLRNLayer.m).
 @property (nonatomic, copy, nullable) NSDictionary<NSString *, NSString *> *modelAssets;
 @property (nonatomic, copy, nullable) NSString *modelID;
 

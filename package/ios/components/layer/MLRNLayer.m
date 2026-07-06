@@ -97,8 +97,34 @@
   [self applyModelIDToLayer:(MLNModelStyleLayer *)_styleLayer];
 }
 
+// `modelId` is a generated, data-driven `NSExpression` layout accessor (not
+// the fork's plain `NSString modelID`). Preserve the fork's whole-layer /
+// per-feature semantics on top of the new type: a non-nil `modelID` prop
+// selects one asset for every feature (a constant expression); `nil`
+// resolves per feature from the `model-id` style-spec property (a `get`
+// expression), matching what "modelID == nil" used to mean.
 - (void)applyModelIDToLayer:(MLNModelStyleLayer *)layer {
-  layer.modelID = _modelID;
+  layer.modelId = _modelID != nil
+                      ? [NSExpression expressionForConstantValue:_modelID]
+                      : [NSExpression expressionWithMLNJSONObject:@[ @"get", @"model-id" ]];
+}
+
+// The fork's hand-written `MLNModelStyleLayer` constructor auto-wired
+// per-feature `bearing`/`size`/`footprint` expressions (plus a hardcoded
+// minZoom 15) directly inside the native SDK layer. The generated
+// `MLNModelStyleLayer` has no such constructor sugar — every consumer
+// composes its own `model-*` paint expressions, exactly like every other
+// layer. This is the explicit, component-level replacement: it preserves the
+// *same* rendering convention (feature properties named `bearing`/`size`/
+// `footprint` drive placement) so existing call sites keep working, with the
+// composition now living here instead of inside the native layer.
+// (The old hardcoded `minZoom 15` is intentionally not replicated — it was
+// an app-specific rendering-cost default, not a binding concern; callers
+// that want it can pass the generic `minzoom` prop.)
+- (void)applyModelPlacementExpressionsToLayer:(MLNModelStyleLayer *)layer {
+  layer.modelRotation = [NSExpression expressionWithMLNJSONObject:@[ @"get", @"bearing" ]];
+  layer.modelScale = [NSExpression expressionWithMLNJSONObject:@[ @"get", @"size" ]];
+  layer.modelFootprint = [NSExpression expressionWithMLNJSONObject:@[ @"get", @"footprint" ]];
 }
 
 - (void)setReactStyle:(NSDictionary *)reactStyle {
@@ -227,11 +253,15 @@
       layer = [[MLNLineStyleLayer alloc] initWithIdentifier:_id source:source];
       break;
     case MLRNLayerTypeModel: {
-      MLNModelStyleLayer *modelLayer =
-          [[MLNModelStyleLayer alloc] initWithIdentifier:_id
-                                        sourceIdentifier:source.identifier];
+      // Standard `initWithIdentifier:source:`, matching every other layer
+      // above — the generated `MLNModelStyleLayer` dropped the fork's
+      // `initWithIdentifier:sourceIdentifier:` selector (which also took the
+      // source's string identifier instead of the source object itself).
+      MLNModelStyleLayer *modelLayer = [[MLNModelStyleLayer alloc] initWithIdentifier:_id
+                                                                               source:source];
       modelLayer.modelAssets = _modelAssets ?: @{};
       [self applyModelIDToLayer:modelLayer];
+      [self applyModelPlacementExpressionsToLayer:modelLayer];
       layer = modelLayer;
       break;
     }

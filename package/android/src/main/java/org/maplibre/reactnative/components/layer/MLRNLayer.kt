@@ -136,36 +136,67 @@ class MLRNLayer(
         }
     }
 
-    // `model` layer only (fork extension): asset id -> local GLB path. The
+    // `model` layer only (fork extension, aligned to the upstream `model`
+    // layer's generated `ModelLayer` API): asset id -> local GLB path. The
     // layer is created with the assets known at mount; later prop updates
     // (viewport reveals placements referencing new models) must reach the
     // live native layer too, or those features fall back to placeholder
-    // cubes forever.
+    // cubes forever. `ModelLayer.setModelAssets` takes a `Map<String,String>`
+    // (the generated binding), not the two parallel `String[]` the fork's
+    // hand-written layer used.
     fun setModelAssets(modelAssets: ReadableMap?) {
         mModelAssets = modelAssets
         val layer = mLayer
         if (layer is ModelLayer) {
-            modelAssetArrays()?.let { (ids, paths) -> layer.setModelAssets(ids, paths) }
+            modelAssetsMap()?.let { layer.setModelAssets(it) }
         }
     }
 
+    // `modelID` selects one asset (by id, a key of `modelAssets`) for every
+    // feature on the layer; `null` (the default) falls back to reading each
+    // feature's own `model-id` property, so heterogeneous models can share a
+    // layer. The generated `ModelLayer` has no constructor sugar for this —
+    // it is a `model-id` layout expression set via `PropertyFactory`, so an
+    // update after mount must be re-applied explicitly here.
     fun setModelID(modelID: String?) {
         mModelID = modelID
+        val layer = mLayer
+        if (layer is ModelLayer) {
+            layer.setProperties(PropertyFactory.modelId(modelIdExpression()))
+        }
     }
 
-    private fun modelAssetArrays(): Pair<Array<String>, Array<String>>? {
+    private fun modelAssetsMap(): Map<String, String>? {
         val assets = mModelAssets ?: return null
-        val ids = mutableListOf<String>()
-        val paths = mutableListOf<String>()
+        val map = mutableMapOf<String, String>()
         val iterator = assets.keySetIterator()
         while (iterator.hasNextKey()) {
             val id = iterator.nextKey()
-            assets.getString(id)?.let { path ->
-                ids.add(id)
-                paths.add(path)
-            }
+            assets.getString(id)?.let { path -> map[id] = path }
         }
-        return if (ids.isEmpty()) null else Pair(ids.toTypedArray(), paths.toTypedArray())
+        return if (map.isEmpty()) null else map
+    }
+
+    private fun modelIdExpression(): Expression = mModelID?.let { Expression.literal(it) } ?: Expression.get("model-id")
+
+    // The fork's hand-written `ModelLayer` constructor auto-wired per-feature
+    // `bearing`/`size`/`footprint` expressions (plus a hardcoded minZoom 15)
+    // directly inside the native SDK layer. The generated `ModelLayer` has no
+    // such constructor sugar — every consumer composes its own `model-*`
+    // paint/layout expressions, exactly like every other layer. This is the
+    // explicit, component-level replacement: it preserves the *same*
+    // rendering convention (feature properties named `bearing`/`size`/
+    // `footprint` drive placement) so existing call sites keep working, with
+    // the composition now living here instead of inside the native layer.
+    // (The old hardcoded `minZoom 15` is intentionally not replicated — it
+    // was an app-specific rendering-cost default, not a binding concern;
+    // callers that want it can pass the generic `minzoom` prop.)
+    private fun applyModelPlacementExpressions(layer: ModelLayer) {
+        layer.setProperties(
+            PropertyFactory.modelRotation(Expression.get("bearing")),
+            PropertyFactory.modelScale(Expression.get("size")),
+            PropertyFactory.modelFootprint(Expression.get("footprint")),
+        )
     }
 
     fun setFilter(readableFilterArray: ReadableArray?) {
@@ -230,13 +261,19 @@ class MLRNLayer(
             }
 
             "model" -> {
-                val assetArrays = modelAssetArrays()
-                if (assetArrays == null) {
+                val assets = modelAssetsMap()
+                if (assets == null) {
                     FLog.e(LOG_TAG, "model layer $mID has no modelAssets entries")
                     null
                 } else {
-                    // Null modelID = per-feature `model-id` property selection.
-                    ModelLayer(mID, mSourceID, assetArrays.first, assetArrays.second, mModelID)
+                    // The generated `ModelLayer` ctor is the standard
+                    // `(layerId, sourceId)` — assets and placement are set as
+                    // ordinary properties below, not passed positionally.
+                    val layer = ModelLayer(mID, mSourceID)
+                    layer.setModelAssets(assets)
+                    layer.setProperties(PropertyFactory.modelId(modelIdExpression()))
+                    applyModelPlacementExpressions(layer)
+                    layer
                 }
             }
 

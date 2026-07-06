@@ -28,8 +28,13 @@ export interface NativeProps extends ViewProps {
   source?: string;
   sourceLayer?: string;
 
-  // `model` layer only (fork extension): asset id -> local GLB path, and the
-  // asset id rendered for features.
+  // `model` layer only (fork extension, aligned to the upstream `model`
+  // layer's generated native API): asset id -> local GLB path, and the asset
+  // id rendered for features. The RN-facing shape is unchanged from the
+  // fork's own `model` layer; only the native leaf calls that consume these
+  // props changed (see `MLRNLayer.m`/`MLRNLayer.kt`) — `modelId` on the
+  // native side is a data-driven `NSExpression`/`PropertyFactory` property,
+  // not a plain string/ctor argument.
   modelAssets?: UnsafeMixed<Record<string, string>>;
   modelID?: string;
 

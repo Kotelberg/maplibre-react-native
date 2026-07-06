@@ -169,17 +169,30 @@ export type RasterLayerProps = SourceLayerProps & {
 };
 
 /**
- * Fork extension: renders one glTF/GLB model per `Point` feature of a GeoJSON
- * source. Per-feature placement is data-driven through feature properties:
- * `bearing` (yaw degrees), `size` (height meters), `footprint` (x/y
- * multiplier, default 1).
+ * Fork extension, aligned to the upstream `model` layer's native API (
+ * `MLNModelStyleLayer` / `ModelLayer` ): renders one glTF/GLB model per `Point`
+ *  feature of a GeoJSON source.
+ *
+ * Per-feature placement is data-driven through feature properties: `bearing`
+ *  (yaw degrees), `size` (height meters), `footprint` (x/y multiplier, default
+ * 1). The upstream generated native layer has no constructor sugar for this
+ * convention — every consumer composes its own `model-rotation` / `model-scale`
+ *  / `model-footprint` expressions. This component preserves the ergonomic
+ * feature-property convention by composing those expressions on the native side
+ * ( `applyModelPlacementExpressionsToLayer:` on iOS,
+ * `applyModelPlacementExpressions` on Android) instead of relying on native
+ * constructor sugar, so existing call sites keep working unchanged.
  */
 export type ModelLayerProps = LegacyBaseLayerProps & {
   type: "model";
   source?: string;
   /** Maps asset ids to local GLB file paths. */
   modelAssets?: Record<string, string>;
-  /** The asset id (a key of `modelAssets`) rendered for features. */
+  /**
+   * The asset id (a key of `modelAssets` ) rendered for every feature. When
+   * omitted, each feature's own `model-id` property selects its asset, enabling
+   * heterogeneous models on a single layer.
+   */
   modelID?: string;
   style?: never;
 };
